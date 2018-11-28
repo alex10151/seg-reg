@@ -11,7 +11,12 @@ class DCMSeriesWriter :public SeriesWriterBase<PixelType,inputDim,outputDim>, pu
 	using ImageIObase = itk::ImageIOBase;
 	using FilenamesContainer = itk::FilenamesContainer;
 public:
-	DCMSeriesWriter():SeriesWriterBase<PixelType,inputDim,outputDim>(){};
+	itk::GDCMImageIO::Pointer dcm;
+	DCMSeriesWriter():SeriesWriterBase<PixelType,inputDim,outputDim>()
+	{
+		dcm = itk::GDCMImageIO::New();
+		this->SetImageIO(dcm.GetPointer());
+	};
 	DCMSeriesWriter(typename OutputWriter::Pointer writePtr)
 	{
 		if (writePtr.GetPointer())

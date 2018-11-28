@@ -10,10 +10,10 @@ class WriterBase
 	virtual void SetInput(CastType *src) = 0;
 };
 
-template<typename PixelType>
-class SingleWriterBase :public WriterBase<PixelType, 2>
+template<typename PixelType, unsigned dim = 2>
+class SingleWriterBase :public WriterBase<PixelType, dim>
 {
-	using OutputType = itk::Image<PixelType, 2>;
+	using OutputType = itk::Image<PixelType, dim>;
 	using SingleOutputWriter = itk::ImageFileWriter<OutputType>;
 protected:
 	typename SingleOutputWriter::Pointer writePtr;
@@ -31,10 +31,19 @@ public:
 		if (this->writePtr.GetPointer())
 			this->writePtr->SetInput(src);
 	}
+	bool SetFilename(std::string filename)
+	{
+		if (this->writePtr.GetPointer())
+		{
+			this->writePtr->SetFileName(filename);
+			return true;
+		}
+		return false;
+	}
 };
-template<typename PixelType,unsigned int inputDim =3,unsigned int outputDim=2>
-class SeriesWriterBase:public WriterBase<PixelType, inputDim>
-{	
+template<typename PixelType, unsigned int inputDim = 3, unsigned int outputDim = 2>
+class SeriesWriterBase :public WriterBase<PixelType, inputDim>
+{
 	using OutputType = itk::Image<PixelType, outputDim>;
 	using CastType = itk::Image<PixelType, inputDim>;
 	using OutputWriter = itk::ImageSeriesWriter<CastType, OutputType>;
@@ -43,7 +52,7 @@ protected:
 public:
 	SeriesWriterBase()
 	{
-		 writePtr = OutputWriter::New();
+		writePtr = OutputWriter::New();
 	}
 	typename OutputWriter::Pointer GetWriter()
 	{
@@ -55,4 +64,3 @@ public:
 			this->writePtr->SetInput(src);
 	}
 };
-

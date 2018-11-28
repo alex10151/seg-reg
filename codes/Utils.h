@@ -3,22 +3,32 @@
 #include"PreDef.h"
 using namespace predef;
 
+//convert a volume to sagittal series
+vector<SingleInputType::Pointer>  ConvertToSagittalImage(InputType::Pointer inputPtr);
+//convert a volume to transverse series
+vector<SingleInputType::Pointer>  ConvertToTransverseImage(InputType::Pointer inputPtr);
 //post process of table removal
 vector<vector<float>> PostProcess(vector<vector<float>> &points);
 //crop 2d image 
 SingleInputType::Pointer CropImage(SingleInputType::Pointer src, int originX, int originY, int cutX, int cutY);
-//copy a series image into a volume
-void CopyFromSeries(InputType::Pointer src, vector<SingleInputType::Pointer>transContainer, int size[]);
-//for copy a transverse
-void CopyTransverse(SingleInputType::Pointer src, SingleInputType::Pointer dst, int size[]);
+//copy a transverse series image into a volume
+void CopyFromSeriesTransverse(InputType::Pointer src, vector<SingleInputType::Pointer>transContainer);
+//copy a sagittal series image into a volume
+void CopyFromSeriesSagittal(InputType::Pointer src, vector<SingleInputType::Pointer>transContainer);
+//copy volume
+void CopyVolume(InputType::Pointer src, InputType::Pointer dst);
+//copy slice
+void CopySlice(SingleInputType::Pointer src, SingleInputType::Pointer dst);
 //create a empty volume from a volume
-InputType::Pointer CreateEmptyVolume(InputType::Pointer inputPtr, int size[]);
+InputType::Pointer CreateEmptyVolume(InputType::Pointer inputPtr);
 //create a slice transverse image from a volume
-SingleInputType::Pointer CreateEmptyTransverseFromVolume(InputType::Pointer inputPtr, int size[]);
+SingleInputType::Pointer CreateEmptyTransverseFromVolume(InputType::Pointer inputPtr);
 //create a slice sagittal image from a volume
-SingleInputType::Pointer CreateEmptySagittalFromVolume(InputType::Pointer inputPtr, int size[]);
+SingleInputType::Pointer CreateEmptySagittalFromVolume(InputType::Pointer inputPtr);
 //get total pixels
+unsigned int NumberOfPixels(vector<unsigned int> size);
 int NumberOfPixels(const int size[]);
+unsigned int NumberOfPixels(unsigned int size[]);
 // cordinates conversion
 int Cordinates(const Point cartesian, const int size[]);
 // boundary check

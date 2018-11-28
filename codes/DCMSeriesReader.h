@@ -3,10 +3,10 @@
 #include "ReaderBase.h"
 
 //unfinished class
-template<typename PixelType>
-class DCMSingleReader :public SingleReaderBase<PixelType>
+template<typename PixelType, unsigned int inputDim=2>
+class DCMSingleReader :public SingleReaderBase<PixelType, inputDim>
 {
-	using InputType = itk::Image<PixelType, 2>;
+	using InputType = itk::Image<PixelType, inputDim>;
 	using InputReader = itk::ImageFileReader<InputType>;
 	using ImageIObase = itk::ImageIOBase;
 };
@@ -20,7 +20,12 @@ class DCMSeriesReader:public SeriesReaderBase<PixelType,inputDim>, public Series
 	using ImageIObase = itk::ImageIOBase;
 	using FilenamesContainer = itk::FilenamesContainer;
 public:
-	DCMSeriesReader():SeriesReaderBase<PixelType, inputDim>(){};
+	itk::GDCMImageIO::Pointer dcm;
+	DCMSeriesReader():SeriesReaderBase<PixelType, inputDim>()
+	{
+		this->dcm = itk::GDCMImageIO::New();
+		this->SetImageIO(dcm.GetPointer());
+	};
 	DCMSeriesReader(typename InputReader::Pointer readPtr)
 	{
 		if (readPtr.GetPointer())
