@@ -1,4 +1,4 @@
-#pragma once
+
 #include "Erode.h"
 // binary erosion
 PixelType* BinaryErode3D(const PixelType *src, const Graph &graph, const PixelType *structureElement)

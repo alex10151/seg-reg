@@ -3,18 +3,18 @@
 #include "itkImageFileReader.h"
 #include "itkImageSeriesReader.h"
 
-template<typename PixelType,unsigned int inputDim=3>
+template<typename PixelType, unsigned int inputDim = 3>
 class ReaderBase
 {
 	using InputType = itk::Image<PixelType, inputDim>;
 public:
-	virtual typename InputType::Pointer GetOutput()=0;
+	virtual typename InputType::Pointer GetOutput() = 0;
 };
 
-template<typename PixelType>
-class SingleReaderBase :public ReaderBase<PixelType, 2>
+template<typename PixelType, unsigned int dim = 2>
+class SingleReaderBase :public ReaderBase<PixelType, dim>
 {
-	using InputType = itk::Image<PixelType, 2>;
+	using InputType = itk::Image<PixelType, dim>;
 	using SingleInputReader = itk::ImageFileReader<InputType>;
 protected:
 	typename SingleInputReader::Pointer readPtr;
@@ -31,9 +31,18 @@ public:
 	{
 		return this->readPtr;
 	}
+	bool SetFilename(std::string filename)
+	{
+		if (this->readPtr.GetPointer())
+		{
+			this->readPtr->SetFileName(filename);
+			return true;
+		}
+		return false;
+	}
 };
-template<typename PixelType,unsigned int inputDim=3>
-class SeriesReaderBase:public ReaderBase<PixelType, inputDim>
+template<typename PixelType, unsigned int inputDim = 3>
+class SeriesReaderBase :public ReaderBase<PixelType, inputDim>
 {
 	using InputType = itk::Image<PixelType, inputDim>;
 	using InputReader = itk::ImageSeriesReader<InputType>;
@@ -43,7 +52,6 @@ public:
 	SeriesReaderBase()
 	{
 		this->readPtr = InputReader::New();
-
 	}
 	typename InputReader::Pointer GetReader()
 	{

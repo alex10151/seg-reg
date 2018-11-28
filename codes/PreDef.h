@@ -40,9 +40,15 @@
 #include"itkAffineTransform.h"
 #include"itkCenteredTransformInitializer.h"
 #include"itkTranslationTransform.h"
+#include"itkBinaryPruningImageFilter.h"
+#include"itkGrayscaleGrindPeakImageFilter.h"
 #include"itkNormalizedCorrelationImageToImageMetric.h"
 #include"itkGradientDescentOptimizer.h"
 #include "itkCheckerBoardImageFilter.h"
+#include"itkMedianImageFilter.h"
+#include"itkAntiAliasBinaryImageFilter.h"
+#include"itkBilateralImageFilter.h"
+#include"itkImportImageFilter.h"
 #include <time.h>
 #include "iostream"
 #include <string>
@@ -67,17 +73,18 @@ namespace predef
 	constexpr int BONES_THRESHOLD = 180;
 	constexpr int HEAD_BONES_THRESHOLD = 300;
 	constexpr int MAX_THRESHOLD = 20;
-	constexpr int DEFAULT_RESIDUAL = 15;
+	constexpr short DEFAULT_RESIDUAL = 15;
 	constexpr int MAX_PIXEL_VALUE = 3000;
 	constexpr int MIN_PIXEL_VALUE = -1000;
+	constexpr int PRUNE_ITERATION = 100;
 
 	//optimizer params(registration)
-	constexpr int NB_OF_BINS = 256;
+	constexpr int NB_OF_BINS = 64;
 	constexpr bool USE_PDF_DERIVATIVE = false;   //true may cause problem
-	constexpr int BACKGROUD_GRAY_LEVEL = 100;
+	constexpr int BACKGROUD_GRAY_LEVEL = 255;
 	constexpr double RELAX_FACTOR = 0.7;
 	constexpr unsigned int NB_ITERATION = 300;
-	constexpr unsigned int NB_OF_LEVELS = 6;
+	constexpr unsigned int NB_OF_LEVELS = 4;
 	constexpr unsigned int REINIT_SEED = 76926294;
 
 	//dicom tag
@@ -99,7 +106,7 @@ namespace predef
 	using BinaryThresholdFilter = itk::BinaryThresholdImageFilter<SingleInputType, SingleInputType>;
 	using ConnectedFilterType = itk::ConnectedThresholdImageFilter<InternalType, InternalType>;
 	using ConfidenceConnectedImageFilter = itk::ConfidenceConnectedImageFilter<InternalType, InternalType>;
-	using CurvatureImageFiltertype = itk::CurvatureFlowImageFilter<InternalType, InternalType>;
+	using CurvatureImageFilterType = itk::CurvatureFlowImageFilter<itk::Image<float,2>, itk::Image<float,2>>;
 	using HT2DFilterType = itk::HoughTransform2DLinesImageFilter<PixelType, PixelType>;
 	using GradFilterType = itk::GradientMagnitudeImageFilter<SingleInputType, SingleInputType>;
 	using ThreshFilterType = itk::ThresholdImageFilter<SingleInputType>;
@@ -112,7 +119,12 @@ namespace predef
 	using ContourFilterType= itk::BinaryContourImageFilter< SingleInputType, SingleInputType>;
 	using FillHoleType= itk::GrayscaleFillholeImageFilter<SingleInputType, SingleInputType> ;
 	using MeanFilter = itk::MeanImageFilter<SingleInputType, SingleInputType>;
-	using CastFloatToUnsignedIntType = itk::CastImageFilter<InternalType, CastType >;
+	using ImportImageFilterType = itk::ImportImageFilter<PixelType, inputDim>;
+	using AntiStackFilterType = itk::AntiAliasBinaryImageFilter<itk::Image<float, 3>, itk::Image<float, 3>>;
+	//using CastFloatToSignedShortType = itk::CastImageFilter<InternalType, CastType >;
+	using PruneType= itk::BinaryPruningImageFilter <SingleInputType, SingleInputType >;
+	using GrindType = itk::GrayscaleGrindPeakImageFilter <SingleInputType, SingleInputType >;
+	using MedianType = itk::MedianImageFilter<SingleInputType, SingleInputType>;
 	// for IO
 	using InputReader = itk::ImageSeriesReader<InputType>;
 	using OutputWriter = itk::ImageSeriesWriter<CastType, OutputType>;
@@ -146,4 +158,5 @@ namespace predef
 	using MovingCastFilterType = itk::CastImageFilter<MovingImageType, InternalImageType >;
 	using ParametersType = RegistrationType::ParametersType;
 	using ResampleFilterType = itk::ResampleImageFilter<MovingImageType, FixedImageType >;
+	using ImportRegType = itk::ImportImageFilter<PixelType, RegInputDim>;
 }

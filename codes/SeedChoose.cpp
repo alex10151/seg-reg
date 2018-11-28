@@ -1,4 +1,4 @@
-#pragma once
+
 #include"Graph.h"
 #include"Utils.h"
 #include"Erode.h"
@@ -102,10 +102,10 @@ Point RandSample(PixelType*src, const int imgSize[])
 }
 // for auto choose seed ,base point is for threshold value, base point choosing not implented,default is (0,0,0).
 //use binaryerode,gray-value erode not tested.
-InternalType::IndexType SeedChoose(const PixelType*Image, const int size[], int residual = DEFAULT_RESIDUAL, Point base = Point(0, 0, 0))
+InternalType::IndexType SeedChoose(const PixelType*Image, const int size[], short residual = DEFAULT_RESIDUAL, Point base = Point(0, 0, 0))
 {
 	Graph connected(size[0], size[1], size[2], 0);
-	int threshold_residual[2] = { -residual,residual };
+	short threshold_residual[2] = { -residual,residual };
 	assert((Image[Cordinates(base, size)] + threshold_residual[0]) >= MIN_PIXEL_VALUE);
 	assert((Image[Cordinates(base, size)] + threshold_residual[1]) <= MAX_PIXEL_VALUE);
 	PixelType threshold[2] = { Image[Cordinates(base,size)] + threshold_residual[0] ,Image[Cordinates(base,size)] + threshold_residual[1] };

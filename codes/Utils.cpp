@@ -1,7 +1,65 @@
-#pragma once
+
 #include"Utils.h"
 
-
+vector<SingleInputType::Pointer>  ConvertToTransverseImage(InputType::Pointer inputPtr)
+{
+	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
+	vector<SingleInputType::Pointer> TransverseContainer;
+	itk::ImageRegionConstIterator<InputType> iter(inputPtr, inputPtr->GetLargestPossibleRegion());
+	for (unsigned int i = 0; i < size[2]; i++)
+	{
+		SingleInputType::Pointer slice = CreateEmptyTransverseFromVolume(inputPtr);
+		itk::ImageRegionIterator<SingleInputType> iterSlice(slice, slice->GetLargestPossibleRegion());
+		for (unsigned int j = 0; j < size[0]; j++)
+		{
+			for (unsigned int k = 0; k < size[1]; k++)
+			{
+				SingleInputType::IndexType dstIndex;
+				InputType::IndexType srcIndex;
+				srcIndex[0] = j;
+				srcIndex[1] = k;
+				srcIndex[2] = i;
+				dstIndex[0] = j;
+				dstIndex[1] = k;
+				iter.SetIndex(srcIndex);
+				iterSlice.SetIndex(dstIndex);
+				iterSlice.Set(iter.Get());
+			}
+		}
+		TransverseContainer.push_back(slice);
+	}
+	return TransverseContainer;
+}
+vector<SingleInputType::Pointer>  ConvertToSagittalImage(InputType::Pointer inputPtr)
+{
+	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
+	vector<SingleInputType::Pointer> sagittalContainer;
+	itk::ImageRegionConstIterator<InputType> iter(inputPtr, inputPtr->GetRequestedRegion());
+	int i = 0;
+	for (unsigned int i = 0; i < size[0]; i++)
+	{
+		SingleInputType::Pointer slice = CreateEmptySagittalFromVolume(inputPtr);
+		itk::ImageRegionIterator<SingleInputType> iterSlice(slice, slice->GetLargestPossibleRegion());
+		for (unsigned int j = 0; j < size[1]; j++)
+		{
+			for (unsigned int k = 0; k < size[2]; k++)
+			{
+				SingleInputType::IndexType dstIndex;
+				InputType::IndexType srcIndex;
+				srcIndex[0] = i;
+				srcIndex[1] = j;
+				srcIndex[2] = k;
+				dstIndex[0] = j;
+				dstIndex[1] = k;
+				iter.SetIndex(srcIndex);
+				iterSlice.SetIndex(dstIndex);
+				iterSlice.Set(iter.Get());
+			}
+		}
+		sagittalContainer.push_back(slice);
+	}
+	return sagittalContainer;
+}
 bool cmp(vector<float>a, vector<float>b)
 {
 	return a.at(1) < b.at(1);
@@ -121,15 +179,16 @@ SingleInputType::Pointer CropImage(SingleInputType::Pointer src, int originX, in
 	return crop;
 }
 
-void CopyFromSeries(InputType::Pointer src, vector<SingleInputType::Pointer>transContainer,int size[])
+void CopyFromSeriesTransverse(InputType::Pointer src, vector<SingleInputType::Pointer>transContainer)
 {
+	InputType::SizeType size = src->GetRequestedRegion().GetSize();
 	itk::ImageRegionIterator<InputType> iterSrc(src, src->GetRequestedRegion());
-	for (int i = 0; i < size[2]; i++)
+	for (unsigned int i = 0; i < size[2]; i++)
 	{
 		itk::ImageRegionIterator<SingleInputType> iterSingle(transContainer.at(i), transContainer.at(i)->GetRequestedRegion());
-		for (int j = 0; j < size[0]; j++)
+		for (unsigned int j = 0; j < size[0]; j++)
 		{
-			for (int k = 0; k < size[1]; k++)
+			for (unsigned int k = 0; k < size[1]; k++)
 			{
 				InputType::IndexType indexSrc;
 				SingleInputType::IndexType indexSingle;
@@ -146,13 +205,66 @@ void CopyFromSeries(InputType::Pointer src, vector<SingleInputType::Pointer>tran
 		}
 	}
 }
-void CopyTransverse(SingleInputType::Pointer src, SingleInputType::Pointer dst, int size[])
+void CopyFromSeriesSagittal(InputType::Pointer src, vector<SingleInputType::Pointer>transContainer)
 {
+	InputType::SizeType size = src->GetRequestedRegion().GetSize();
+	itk::ImageRegionIterator<InputType> iterSrc(src, src->GetRequestedRegion());
+	for (unsigned int i = 0; i < size[0]; i++)
+	{
+		itk::ImageRegionIterator<SingleInputType> iterSingle(transContainer.at(i), transContainer.at(i)->GetRequestedRegion());
+		for (unsigned int j = 0; j < size[1]; j++)
+		{
+			for (unsigned int k = 0; k < size[2]; k++)
+			{
+				InputType::IndexType indexSrc;
+				SingleInputType::IndexType indexSingle;
+				indexSrc[1] = j;
+				indexSrc[2] = k;
+				indexSrc[0] = i;
+				indexSingle[0] = j;
+				indexSingle[1] = k;
+				iterSrc.SetIndex(indexSrc);
+				iterSingle.SetIndex(indexSingle);
+				iterSrc.Set(iterSingle.Get());
+
+			}
+		}
+	}
+}
+void CopyVolume(InputType::Pointer src, InputType::Pointer dst)
+{
+	InputType::SizeType size = src->GetLargestPossibleRegion().GetSize();
+	itk::ImageRegionIterator<InputType> iterSrc(src, src->GetLargestPossibleRegion());
+	itk::ImageRegionIterator<InputType> iterDst(dst, dst->GetLargestPossibleRegion());
+	for (unsigned int j = 0; j < size[0]; j++)
+	{
+		for (unsigned int k = 0; k < size[1]; k++)
+		{
+			for (unsigned int i = 0; i < size[2]; i++)
+			{
+				InputType::IndexType dstIndex;
+				InputType::IndexType srcIndex;
+				srcIndex[0] = j;
+				srcIndex[1] = k;
+				srcIndex[2] = i;
+				dstIndex[0] = j;
+				dstIndex[1] = k;
+				dstIndex[2] = i;
+				iterSrc.SetIndex(srcIndex);
+				iterDst.SetIndex(dstIndex);
+				iterDst.Set(iterSrc.Get());
+			}
+		}
+	}
+}
+void CopySlice(SingleInputType::Pointer src, SingleInputType::Pointer dst)
+{
+	SingleInputType::SizeType size = src->GetLargestPossibleRegion().GetSize();
 	itk::ImageRegionIterator<SingleInputType> iterSrc(src, src->GetLargestPossibleRegion());
 	itk::ImageRegionIterator<SingleInputType> iterDst(dst, dst->GetLargestPossibleRegion());
-	for (int j = 0; j < size[0]; j++)
+	for (unsigned int j = 0; j < size[0]; j++)
 	{
-		for (int k = 0; k < size[1]; k++)
+		for (unsigned int k = 0; k < size[1]; k++)
 		{
 			SingleInputType::IndexType dstIndex;
 			SingleInputType::IndexType srcIndex;
@@ -166,8 +278,9 @@ void CopyTransverse(SingleInputType::Pointer src, SingleInputType::Pointer dst, 
 		}
 	}
 }
-SingleInputType::Pointer CreateEmptySagittalFromVolume(InputType::Pointer inputPtr, int size[])
+SingleInputType::Pointer CreateEmptySagittalFromVolume(InputType::Pointer inputPtr)
 {
+	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
 	SingleInputType::Pointer slice = SingleInputType::New();
 
 	SingleInputType::RegionType sliceRegion;
@@ -191,8 +304,9 @@ SingleInputType::Pointer CreateEmptySagittalFromVolume(InputType::Pointer inputP
 	slice->Allocate();
 	return slice;
 }
-InputType::Pointer CreateEmptyVolume(InputType::Pointer inputPtr, int size[])
+InputType::Pointer CreateEmptyVolume(InputType::Pointer inputPtr)
 {
+	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
 	InputType::Pointer volume = InputType::New();
 
 	InputType::RegionType region;
@@ -220,8 +334,9 @@ InputType::Pointer CreateEmptyVolume(InputType::Pointer inputPtr, int size[])
 	volume->Allocate();
 	return volume;
 }
-SingleInputType::Pointer CreateEmptyTransverseFromVolume(InputType::Pointer inputPtr,int size[])
+SingleInputType::Pointer CreateEmptyTransverseFromVolume(InputType::Pointer inputPtr)
 {
+	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
 	SingleInputType::Pointer slice = SingleInputType::New();
 
 	SingleInputType::RegionType sliceRegion;
@@ -246,6 +361,14 @@ SingleInputType::Pointer CreateEmptyTransverseFromVolume(InputType::Pointer inpu
 	return slice;
 }
 int NumberOfPixels(const int size[])
+{
+	return size[0] * size[1] * size[2];
+}
+unsigned int NumberOfPixels(vector<unsigned int> size)
+{
+	return size[0] * size[1] * size[2];
+}
+unsigned int NumberOfPixels(unsigned int size[])
 {
 	return size[0] * size[1] * size[2];
 }

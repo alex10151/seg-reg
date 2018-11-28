@@ -28,16 +28,17 @@ float GetIntersection(float diag, float yMax,float zMax,float y1, float z1, floa
 	}
 	return (res1<res2)?res2:res1;
 }
-InputType::Pointer  TableRemoval(InputType::Pointer inputPtr, int size[], vector<vector<float>>structureSlice)
+void TableRemoval(InputType::Pointer inputPtr, vector<vector<float>>structureSlice)
 {
+	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
 	itk::ImageRegionIterator<InputType> itrVolume(inputPtr, inputPtr->GetLargestPossibleRegion());
 	int initIndex = structureSlice.at(0).at(0);
 	int endIndex = structureSlice.at(structureSlice.size() - 1).at(0);
-	for (int k = 0; k < size[2]; k++)
+	for (unsigned int k = 0; k < size[2]; k++)
 	{
 		for (int i = initIndex; i <= endIndex; i++)
 		{
-			for (int j = 0; j < size[1]; j++)
+			for (unsigned int j = 0; j < size[1]; j++)
 			{
 				InputType::IndexType index;
 				index[0] = i;
@@ -49,58 +50,8 @@ InputType::Pointer  TableRemoval(InputType::Pointer inputPtr, int size[], vector
 			}
 		}
 	}
-	return inputPtr;
 }
 
-vector<SingleInputType::Pointer>  ConvertToSagittalImage(InputType::Pointer inputPtr, int size[])
-{
-	vector<SingleInputType::Pointer> sagittalContainer;
-	itk::ImageRegionConstIterator<InputType> iter(inputPtr, inputPtr->GetRequestedRegion());
-	int i = 0;
-	for (int i = 0; i < size[0]; i++)
-	{
-		SingleInputType::Pointer slice = SingleInputType::New();
-
-		SingleInputType::RegionType sliceRegion;
-		SingleInputType::RegionType::IndexType sliceStart;
-		sliceStart[0] = 0;
-		sliceStart[1] = 0;
-		SingleInputType::RegionType::SizeType sliceSize;
-		sliceSize[0] = size[1];
-		sliceSize[1] = size[2];
-		sliceRegion.SetSize(sliceSize);
-		sliceRegion.SetIndex(sliceStart);
-		slice->SetRegions(sliceRegion);
-		SingleInputType::PointType sliceOrigin;
-		sliceOrigin[0] = inputPtr->GetOrigin()[1];
-		sliceOrigin[1] = inputPtr->GetOrigin()[2];
-		slice->SetOrigin(sliceOrigin);
-		SingleInputType::SpacingType sliceSpacing;
-		sliceSpacing[0] = inputPtr->GetSpacing()[1];
-		sliceSpacing[1] = inputPtr->GetSpacing()[2];
-		slice->SetSpacing(sliceSpacing);
-		slice->Allocate();
-		itk::ImageRegionIterator<SingleInputType> iterSlice(slice, sliceRegion);
-		for (int j = 0; j < size[1]; j++)
-		{
-			for (int k = 0; k < size[2]; k++)
-			{
-				SingleInputType::IndexType dstIndex;
-				InputType::IndexType srcIndex;
-				srcIndex[0] = i;
-				srcIndex[1] = j;
-				srcIndex[2] = k;
-				dstIndex[0] = j;
-				dstIndex[1] = k;
-				iter.SetIndex(srcIndex);
-				iterSlice.SetIndex(dstIndex);
-				iterSlice.Set(iter.Get());
-			}
-		}
-		sagittalContainer.push_back(slice);
-	}
-	return sagittalContainer;
-}
 HT2DFilterType::LinesListType HoughTransformOnGradientImage(SingleInputType::Pointer srcImg)
 {
 	GradFilterType::Pointer gradFilter = GradFilterType::New();
@@ -110,49 +61,19 @@ HT2DFilterType::LinesListType HoughTransformOnGradientImage(SingleInputType::Poi
 	itk::GDCMImageIO::Pointer io = itk::GDCMImageIO::New();
 	itk::CastImageFilter<SingleInputType, itk::Image<PixelTypeInt, 2>> ::Pointer cc = itk::CastImageFilter<SingleInputType, itk::Image<PixelTypeInt, 2>>::New();
 	itk::SobelEdgeDetectionImageFilter<SingleInputType, SingleInputType>::Pointer sobelF = itk::SobelEdgeDetectionImageFilter<SingleInputType, SingleInputType>::New();
-	//itk::CannyEdgeDetectionImageFilter<SingleInputType, SingleInputType>::Pointer cannyF = itk::CannyEdgeDetectionImageFilter<SingleInputType, SingleInputType>::New();
-	         
-	//using ball = itk::BinaryBallStructuringElement<PixelType>;
-	//itk::BinaryErodeImageFilter<SingleInputType, SingleInputType, ball>::Pointer erodef = itk::BinaryErodeImageFilter<SingleInputType, SingleInputType, ball>::New();
-	//ball element;
-	//element.SetRadius(100);
-	//element.CreateStructuringElement();
-	//erodef->SetForegroundValue(1000);
-	//erodef->SetKernel(element);
 
 	gradFilter->SetInput(srcImg);
 	bf->SetOutsideValue(MIN_PIXEL_VALUE);
 	bf->SetInsideValue(MAX_PIXEL_VALUE);
 	bf->SetLowerThreshold(THRESHOLD_LOW);
 	bf->SetUpperThreshold(THRESHOLD_UP);
-	//bf->SetInput(gradFilter->GetOutput());
 	bf->SetInput(gradFilter->GetOutput());
-
-	//cc->SetInput(bf1->GetOutput());
-	//p1->SetFileName("ttttttt.dcm");
-	//p1->SetImageIO(io);
-	//p1->SetInput(cc->GetOutput());
 	htFilter->SetDiscRadius(HOUGHTRANSFORM_RADIUS);
 	htFilter->SetNumberOfLines(HOUGHTRANSFORM_LINES);
 	htFilter->SetVariance(HOUGHTRANSFORM_VAR);
-	//erodef->SetInput(bf1->GetOutput());
-	//sobelF->SetInput(bf1->GetOutput());
-	//cannyF->SetVariance(2);
-	//cannyF->SetUpperThreshold(500);
-	//cannyF->SetLowerThreshold(250);
-
-	//cannyF->SetInput(srcImg);
 	htFilter->SetInput(bf->GetOutput());
 	cc->SetInput(htFilter->GetOutput());
 	p1->SetInput(cc->GetOutput());
-	//try
-	//{
-	//	p1->Update();
-	//}
-	//catch (itk::ExceptionObject &excep)
-	//{
-	//	cerr << excep << endl;
-	//}
 	try
 	{
 		htFilter->Update();
@@ -164,7 +85,7 @@ HT2DFilterType::LinesListType HoughTransformOnGradientImage(SingleInputType::Poi
 
 	return htFilter->GetLines();
 }
-float FindYofPoint(HT2DFilterType::LinesListType &lines, int size[])
+float FindYofPoint(HT2DFilterType::LinesListType &lines, vector<short> size)
 {
 	HT2DFilterType::LinesListType::const_iterator itr_lines = lines.begin();
 	float diag = sqrt(size[1] * size[1] + size[2] * size[2]);
@@ -203,8 +124,6 @@ float FindYofPoint(HT2DFilterType::LinesListType &lines, int size[])
 	sort(smin.begin(), smin.end());
 	float sum = accumulate(smin.begin(), smin.end(), 0);
 	float mean = sum / smin.size();
-	//return smin.at(10);
-	//return mean;
 	if (smin.size() <= 10)
 	{
 		return smin.at(smin.size() - 1);
@@ -214,33 +133,43 @@ float FindYofPoint(HT2DFilterType::LinesListType &lines, int size[])
 		return smin.at(10);
 	}
 }
-InputType::Pointer  TableRemovalPipe(InputType::Pointer inputPtr, int size[])
+vector<short> Convert2Int(InputType::SizeType size)
 {
-	vector<SingleInputType::Pointer> sagiitalContainer = ConvertToSagittalImage(inputPtr, size);
+	vector<short>res;
+	if (size.Dimension == 2)
+	{
+		res[0] = size[0];
+		res[1] = size[1];
+		return res;
+	}
+	if (size.Dimension == 3)
+	{
+		res[0] = size[0];
+		res[1] = size[1];
+		res[2] = size[2];
+		return res;
+	}
+	return res;
+ }
+void TableRemovalPipe(InputType::Pointer inputPtr)
+{
+	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
+	vector<SingleInputType::Pointer> sagiitalContainer = ConvertToSagittalImage(inputPtr);
 	vector<vector<float>> pointsOfTransverse;
+	cout << "========Start to remove table:" << endl;
 	for (unsigned int i = 0; i < sagiitalContainer.size(); i++)
 	{
 		vector<float> cord;
-		//SingleInputType::Pointer crop = CropImage(sagiitalContainer.at(i),size[1]/2,0,size[1]/2,size[2]);
 		HT2DFilterType::LinesListType lines = HoughTransformOnGradientImage(sagiitalContainer.at(i));
-		cout << "the num of sagiital images:" << sagiitalContainer.size() << endl;
-		cout << "this is epoch  :" << i << endl;
+		cout << "======================== epoch  :" << i << endl;
 		if (lines.size() == 0)
 			continue;
-		//int cropSize[3] = {size[0],size[1]/2,size[2]};
-		float y = FindYofPoint(lines, size);
-		cout << "the y is :" << y << endl;
+		float y = FindYofPoint(lines, Convert2Int(size));
 		cord.push_back(i);
 		cord.push_back(y);
 		pointsOfTransverse.push_back(cord);
 
 	}
 	pointsOfTransverse = PostProcess(pointsOfTransverse);
-	//vector<vector<float>>::iterator itrs = pointsOfTransverse.begin();
-	//while (itrs != pointsOfTransverse.end())
-	//{
-	//	(*itrs).at(1) = (*itrs).at(1) + size[1] / 2;
-	//	itrs++;
-	//}
-	return TableRemoval(inputPtr, size, pointsOfTransverse);
+	TableRemoval(inputPtr, pointsOfTransverse);
 }
