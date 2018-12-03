@@ -53,6 +53,15 @@ vector<double> Parse2VecDouble(char *params)
 	}
 	return temp;
 }
+InputType::Pointer Rescale(InputType::Pointer inputPtr,int shift,int scale)
+{
+	ShiftFilterType::Pointer rescale = ShiftFilterType::New();
+	rescale->SetInput(inputPtr);
+	rescale->SetShift(shift);
+	rescale->SetScale(scale);
+	rescale->Update();
+	return rescale->GetOutput();
+}
 int RemovalPipelinev2(char*type,short*src,short*dst,short*bones,unsigned int* sizep, float* spacep, float* originp)
 { 
 	ImportImageFilterType::Pointer ptr = ImportImageFilterType::New();
@@ -69,23 +78,30 @@ int RemovalPipelinev2(char*type,short*src,short*dst,short*bones,unsigned int* si
 	ptr->SetImportPointer(src,NumberOfPixels(sizep),false);
 	ptr->Update();
 	InputType::Pointer inputPtr =  ptr->GetOutput();
-	InputType::Pointer resBone = CreateEmptyVolume(inputPtr);
+	inputPtr = Rescale(inputPtr,DEFAULT_SHIFT,DEFAULT_SCALE);
+
+	vector<InputType::Pointer> removal;
+	InputType::Pointer res;
 	if (!strcmp(type, "-table"))
-		TableRemovalPipe(inputPtr);
+	{
+		res = TableRemovalPipe(inputPtr);
+		removal.push_back(res);
+	}
 	if (!strcmp(type, "-headbone"))
 	{
-		BonesRemovalPipe(inputPtr, resBone, true);
+		removal = BonesRemovalPipe(inputPtr, true);
 	}
 	if (!strcmp(type, "-bodybone"))
 	{
-		BonesRemovalPipe(inputPtr, resBone, false);
+		removal = BonesRemovalPipe(inputPtr, false);
 	}
+	InputType::Pointer temp = Rescale(removal.at(0), -DEFAULT_SHIFT, DEFAULT_SCALE);
 	for (unsigned int i = 0; i < NumberOfPixels(sizep); i++)
-		dst[i] = inputPtr->GetBufferPointer()[i];
+		dst[i] = temp->GetBufferPointer()[i];
 	if (strcmp(type, "-table"))
 	{
 		for (unsigned int i = 0; i < NumberOfPixels(sizep); i++)
-			bones[i] = resBone->GetBufferPointer()[i];
+			bones[i] = removal.at(1)->GetBufferPointer()[i];
 	}
 	return EXIT_SUCCESS;
 }
@@ -104,22 +120,29 @@ int RemovalPipeline(char*type,char*src,char*dst,char*dstBone,unsigned int* sizep
 	rawWriteB.SetFilename(dstBone);
 	rawRead.Run();
 	inputPtr = rawRead.GetOutput();
-	InputType::Pointer resBone = CreateEmptyVolume(inputPtr);
+	inputPtr = Rescale(inputPtr, DEFAULT_SHIFT, DEFAULT_SCALE);
+
+	vector<InputType::Pointer> removal;
+	InputType::Pointer res;
 	if (!strcmp(type, "-table"))
-		TableRemovalPipe(inputPtr);
+	{
+		res = TableRemovalPipe(inputPtr);
+		removal.push_back(res);
+	}
 	if (!strcmp(type, "-headbone"))
 	{
-		BonesRemovalPipe(inputPtr,resBone, true );
+		removal = BonesRemovalPipe(inputPtr, true );
 	}
 	if (!strcmp(type, "-bodybone"))
 	{
-		BonesRemovalPipe(inputPtr,resBone, false);
+		removal = BonesRemovalPipe(inputPtr, false);
 	}
-	rawWrite.SetInput(inputPtr);
+	InputType::Pointer temp = Rescale(removal.at(0),-DEFAULT_SHIFT,DEFAULT_SCALE);
+	rawWrite.SetInput(temp);
 	rawWrite.Run();
 	if (strcmp(type,"-table"))
 	{
-		rawWriteB.SetInput(resBone);
+		rawWriteB.SetInput(removal.at(1));
 		rawWriteB.Run();
 	}
 	return EXIT_SUCCESS;
@@ -141,6 +164,7 @@ int RegistrationPipelinev2(short*fix, short*mov, short*dst, unsigned int* sizeFP
 	ptr1->SetImportPointer(fix, NumberOfPixels(sizeFP), false);
 	ptr1->Update();
 	FixedImageType::Pointer inputPtr1 = ptr1->GetOutput();
+	FixedImageType::Pointer tempFix = Rescale(inputPtr1, -DEFAULT_SHIFT, DEFAULT_SCALE);
 
 	ImportRegType::Pointer ptr2 = ImportRegType::New();
 	ImportRegType::RegionType region2;
@@ -156,14 +180,16 @@ int RegistrationPipelinev2(short*fix, short*mov, short*dst, unsigned int* sizeFP
 	ptr2->SetImportPointer(mov, NumberOfPixels(sizeMP), false);
 	ptr2->Update();
 	MovingImageType::Pointer inputPtr2 = ptr2->GetOutput();
+	MovingImageType::Pointer tempMov = Rescale(inputPtr2, -DEFAULT_SHIFT, DEFAULT_SCALE);
 	//registration
 	RegistrationType::Pointer registration = RegistrationType::New();
-	OptimizeStepPipe(inputPtr1, inputPtr2,registration);
+	OptimizeStepPipe(tempFix, tempMov,registration);
 	// post process
 	ResampleFilterType::Pointer resample = ResampleFilterType::New();
-	ResamplePipe(registration, inputPtr1, inputPtr2, resample);
+	ResamplePipe(registration, tempFix, tempMov, resample);
+	FixedImageType::Pointer res = Rescale(resample->GetOutput(), -DEFAULT_SHIFT, DEFAULT_SCALE);
 	for (unsigned int i = 0; i < NumberOfPixels(sizeFP); i++)
-		dst[i] = resample->GetOutput()->GetBufferPointer()[i];
+		dst[i] =res->GetBufferPointer()[i];
 	return EXIT_SUCCESS;
 }
 
@@ -189,6 +215,8 @@ int RegistrationPipeline(char*fix, char*mov, char*dst, unsigned int* sizeFP, flo
 	// post process
 	ResampleFilterType::Pointer resample = ResampleFilterType::New();
 	ResamplePipe(registration, seriesFix.GetOutput(), seriesMov.GetOutput(),resample);
+	
+	//ReoptimizeStepPipe(seriesFix.GetOutput(),resample->GetOutput(),registrationR);
 	//writer def
 	RawWriter<PixelType, RegInputDim> seriesW(sizeF,spaceF,originF,is2BinaryF,isLittleEndF);
 	seriesW.SetFilename(dst);

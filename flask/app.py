@@ -65,16 +65,19 @@ class Segmentation(Resource):
         origin = sg.FloatArray(3)
         size = sg.UintArray(3)
         for i in [0, 1, 2]:
-            space[i] = float(data["space"][i])
-            size[i] = int(data["origin"][i])
-            origin[i] = float(data["size"][i])
+            space[i] = data["space"][i]
+            size[i] = data["size"][i]
+            origin[i] = data["origin"][i]
         len_img = size[0] * size[1] * size[2]
         src_img = sg.ShortArray(len_img)
         res_img = sg.ShortArray(len_img)
         bones_img = sg.ShortArray(len_img)
-        src = np.fromstring(base64.urlsafe_b64decode(data["values"]), dtype="<f4")
+        src = base64.urlsafe_b64decode(data["values"])
+        res = []
+        for i in range(1, len(src), 2):
+            res.append(src[i - 1] + src[i] * 2 ** 8)
         for i in range(len_img):
-            src_img[i] = int(src[i])
+            src_img[i] = res[i]
         try:
             sg.RemovalPipelinev2(data['type'], src_img, res_img, bones_img, size, space, origin)
         except:
@@ -85,7 +88,7 @@ class Segmentation(Resource):
             res.append(res_img[i])
             if data['bones'] is True:
                 res_bones.append(bones_img[i])
-        return SegDao(np.array(res), np.array(res_bones)), 200
+        return SegDao(np.array(res, dtype=np.uint16), np.array(res_bones, dtype=np.uint16)), 200
 
 
 @api.resource("/reg")
@@ -142,8 +145,14 @@ class Registration(Resource):
         spacem = sg.FloatArray(3)
         originm = sg.FloatArray(3)
         sizem = sg.UintArray(3)
-        fix_val = np.fromstring(base64.urlsafe_b64decode(data["fix_values"]), dtype="<f4")
-        mov_val = np.fromstring(base64.urlsafe_b64decode(data["mov_values"]), dtype="<f4")
+        fix_src = base64.urlsafe_b64decode(data["fix_values"])
+        mov_src = base64.urlsafe_b64decode(data["mov_values"])
+        fix_val = []
+        mov_val = []
+        for i in range(1, len(fix_src), 2):
+            fix_val.append(fix_src[i - 1] + fix_src[i] * 2 ** 8)
+        for i in range(1, len(mov_src), 2):
+            mov_val.append(mov_src[i - 1] + mov_src[i] * 2 ** 8)
         for i in [0, 1, 2]:
             sizef[i] = int(data['size_fix'][i])
             spacef[i] = float(data['space_fix'][i])
@@ -167,8 +176,8 @@ class Registration(Resource):
         res = []
         for i in range(lenf):
             res.append(img_res[i])
-        return RegDao(np.array(res)), 200
+        return RegDao(np.array(res, dtype=np.uint16)), 200
 
 
 if __name__ == '__main__':
-    app1.run(debug=True)
+    app1.run(debug=False)
