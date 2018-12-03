@@ -34,7 +34,7 @@ public:
 		std::cout << std::endl;
 		if (registration->GetCurrentLevel() == 0)
 		{
-			optimizer->SetMaximumStepLength(16.00);
+			optimizer->SetMaximumStepLength(0.1);
 			optimizer->SetMinimumStepLength(0.01);
 		}
 		else
@@ -43,6 +43,10 @@ public:
 				optimizer->GetMaximumStepLength() * 0.25);
 			optimizer->SetMinimumStepLength(
 				optimizer->GetMinimumStepLength() * 0.1);
+			//optimizer->SetMaximumStepLength(
+			//	optimizer->GetMaximumStepLength() );
+			//optimizer->SetMinimumStepLength(
+			//	optimizer->GetMinimumStepLength());
 		}
 	}
 	void Execute(const itk::Object *, const itk::EventObject &)

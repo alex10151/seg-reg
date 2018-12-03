@@ -66,26 +66,30 @@ bool cmp(vector<float>a, vector<float>b)
 }
 vector<vector<float>> PostProcess(vector<vector<float>> &points)
 {
-	volatile float head;
-	volatile float tail;
 	for (unsigned int i = 0; i < points.size(); i++)
 	{
-		if (points.at(i).at(1) != LIMIT)
-		{
-			head = points.at(i).at(0);
-			break;
-		}
+		points.at(i).at(1) -= 5;
 	}
-	for (unsigned int i = points.size() - 1; i < points.size(); i--)
-	{
-		if (points.at(i).at(1) != LIMIT)
-		{
-			tail = points.at(i).at(0);
-			break;
-		}
-	}
+	//volatile float head;
+	//volatile float tail;
+	//for (unsigned int i = 0; i < points.size(); i++)
+	//{
+	//	if (points.at(i).at(1) != LIMIT)
+	//	{
+	//		head = points.at(i).at(0);
+	//		break;
+	//	}
+	//}
+	//for (unsigned int i = points.size() - 1; i>=0; i--)
+	//{
+	//	if (points.at(i).at(1) != LIMIT)
+	//	{
+	//		tail = points.at(i).at(0);
+	//		break;
+	//	}
+	//}
 	// set threshold (base point :median of lines)
-	vector<vector<float>> tempPoints = points;
+	/*vector<vector<float>> tempPoints = points;
 	sort(tempPoints.begin(), tempPoints.end(), cmp);
 	for (unsigned int i = 0; i < points.size(); i++)
 	{
@@ -102,22 +106,19 @@ vector<vector<float>> PostProcess(vector<vector<float>> &points)
 		}
 		if (flag)
 			i--;
-	}
+	}*/
 
 	//median filter
-	vector<float>temp;
-	for (int i = head + WINDOW_SIZE / 2; i <= tail - WINDOW_SIZE / 2; i++)
-	{
+	//vector<float>temp;
+	//for (int i = head + WINDOW_SIZE / 2; i <= tail - WINDOW_SIZE / 2; i++)
+	//{
 
-		for (int j = -(WINDOW_SIZE / 2); j <= WINDOW_SIZE / 2; j++)
-			temp.push_back(points.at(i + j).at(1));
-		sort(temp.begin(), temp.end());
-		if (((i >= (tail - head) / 4)) && (i <= (tail - head) * 3 / 4))
-			points.at(i).at(1) = temp.at(WINDOW_SIZE / 2) + 5;
-		else
-			points.at(i).at(1) = temp.at(WINDOW_SIZE / 2);
-		temp.clear();
-	}
+	//	for (int j = -(WINDOW_SIZE / 2); j <= WINDOW_SIZE / 2; j++)
+	//		temp.push_back(points.at(i + j).at(1));
+	//	sort(temp.begin(), temp.end());
+	//	points.at(i).at(1) = temp.at(WINDOW_SIZE / 2)-DEFAULT_RESIDUAL;
+	//	temp.clear();
+	//}
 
 	////mean filter
 	//vector<float>temp;

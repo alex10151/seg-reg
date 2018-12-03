@@ -1,6 +1,8 @@
 #include"TableRemoval.h"
 #include"Utils.h"
 #include<numeric>
+#include"RawWriter.h"
+#include"math.h"
 
 float GetIntersection(float diag, float yMax,float zMax,float y1, float z1, float vy, float vz)
 {
@@ -28,7 +30,7 @@ float GetIntersection(float diag, float yMax,float zMax,float y1, float z1, floa
 	}
 	return (res1<res2)?res2:res1;
 }
-void TableRemoval(InputType::Pointer inputPtr, vector<vector<float>>structureSlice)
+InputType::Pointer TableRemoval(InputType::Pointer inputPtr, vector<vector<float>>structureSlice)
 {
 	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
 	itk::ImageRegionIterator<InputType> itrVolume(inputPtr, inputPtr->GetLargestPossibleRegion());
@@ -45,11 +47,12 @@ void TableRemoval(InputType::Pointer inputPtr, vector<vector<float>>structureSli
 				index[1] = j;
 				index[2] = k;
 				itrVolume.SetIndex(index);
-				if (j >= structureSlice.at(i).at(1))
+				if (j >= structureSlice.at(i-initIndex).at(1))
 					itrVolume.Set(MIN_PIXEL_VALUE);
 			}
 		}
 	}
+	return inputPtr;
 }
 
 HT2DFilterType::LinesListType HoughTransformOnGradientImage(SingleInputType::Pointer srcImg)
@@ -117,41 +120,29 @@ float FindYofPoint(HT2DFilterType::LinesListType &lines, vector<short> size)
 		itr_lines++;
 		counter++;
 	}
-	for (unsigned int i = 0; i < smin.size(); i++)
-		cout << smin.at(i) << endl;
 	if (smin.size() == 0)
 		return LIMIT;
 	sort(smin.begin(), smin.end());
 	float sum = accumulate(smin.begin(), smin.end(), 0);
 	float mean = sum / smin.size();
-	if (smin.size() <= 10)
-	{
-		return smin.at(smin.size() - 1);
-	}
-	else
-	{
-		return smin.at(10);
-	}
+	//if (smin.size() <= 3)
+	//{
+	//	return smin.at(smin.size() - 1);
+	//}
+	//else
+	//{
+	//	return smin.at(3);
+	//}
+	return smin.at(0);
 }
-vector<short> Convert2Int(InputType::SizeType size)
+vector<short> Convert2Vec(InputType::SizeType size)
 {
 	vector<short>res;
-	if (size.Dimension == 2)
-	{
-		res[0] = size[0];
-		res[1] = size[1];
-		return res;
-	}
-	if (size.Dimension == 3)
-	{
-		res[0] = size[0];
-		res[1] = size[1];
-		res[2] = size[2];
-		return res;
-	}
+	for(unsigned int i =0;i<size.Dimension;i++)
+			res.push_back(size[i]);
 	return res;
  }
-void TableRemovalPipe(InputType::Pointer inputPtr)
+InputType::Pointer TableRemovalPipe(InputType::Pointer inputPtr)
 {
 	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
 	vector<SingleInputType::Pointer> sagiitalContainer = ConvertToSagittalImage(inputPtr);
@@ -163,13 +154,42 @@ void TableRemovalPipe(InputType::Pointer inputPtr)
 		HT2DFilterType::LinesListType lines = HoughTransformOnGradientImage(sagiitalContainer.at(i));
 		cout << "======================== epoch  :" << i << endl;
 		if (lines.size() == 0)
-			continue;
-		float y = FindYofPoint(lines, Convert2Int(size));
+		{
+			cord.push_back(i);
+			cord.push_back(LIMIT);
+			pointsOfTransverse.push_back(cord);
+			continue; 
+		}
+		float y = FindYofPoint(lines, Convert2Vec(size));
 		cord.push_back(i);
 		cord.push_back(y);
 		pointsOfTransverse.push_back(cord);
 
 	}
 	pointsOfTransverse = PostProcess(pointsOfTransverse);
-	TableRemoval(inputPtr, pointsOfTransverse);
+
+	//table seg lines
+	OutputType::Pointer temp = CreateEmptyTransverseFromVolume(inputPtr);
+	itk::ImageRegionIterator<OutputType> lineItr(temp, temp->GetLargestPossibleRegion());
+	OutputType::SizeType sizeL = temp->GetLargestPossibleRegion().GetSize();
+	for (unsigned int i = 0; i < pointsOfTransverse.size(); i++)
+	{
+		if (pointsOfTransverse.at(i)[1] >sizeL[0])
+			continue;
+		OutputType::IndexType index;
+		index[0] = pointsOfTransverse.at(i)[0];
+		index[1] = floor(pointsOfTransverse.at(i)[1]); 
+		lineItr.SetIndex(index);
+		lineItr.Set(MAX_PIXEL_VALUE);
+	}
+	vector<unsigned int > size1 = { 512,512 };
+	vector<float> space = { 0.9765625 ,0.9765625  };
+	vector<float> ori = { 0,0 };
+	RawWriter<PixelType, 2> raw(size1, space, ori, true, false);
+	raw.SetFilename("asdsadsadqwewqe213213.raw");
+	raw.SetInput(temp);
+	raw.Run();
+
+	inputPtr = TableRemoval(inputPtr, pointsOfTransverse);
+	return inputPtr;
 }

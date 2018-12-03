@@ -32,11 +32,17 @@ int OptimizeStepPipe(FixedImageType::Pointer fix,MovingImageType::Pointer mov, R
 	movingCaster->Update();
 	//set registration params
 	registration->SetFixedImageRegion(fixedCaster->GetOutput()->GetLargestPossibleRegion());
-	ParametersType initialParameters(transform->GetNumberOfParameters());
-	for (unsigned int i = 0; i < transform->GetNumberOfParameters(); i++)
-		initialParameters[i] = 1;
-
-	registration->SetInitialTransformParameters(initialParameters);
+	//ParametersType initialParameters(transform->GetNumberOfParameters());
+	//for (unsigned int i = 0; i < transform->GetNumberOfParameters(); i++)
+	//	initialParameters[i] = 1;
+	TransformInitializeType::Pointer initializer = TransformInitializeType::New();
+	initializer->SetTransform(transform);
+	initializer->SetFixedImage(fixedCaster->GetOutput());
+	initializer->SetMovingImage(movingCaster->GetOutput());
+	initializer->MomentsOn();
+	initializer->InitializeTransform();
+	//registration->SetInitialTransformParameters(initialParameters);
+	registration->SetInitialTransformParameters(transform->GetParameters());
 	metric->SetNumberOfSpatialSamples(fix->GetLargestPossibleRegion().GetNumberOfPixels()*0.001);
 	metric->SetNumberOfHistogramBins(NB_OF_BINS);
 	metric->ReinitializeSeed(REINIT_SEED);
@@ -66,10 +72,9 @@ int OptimizeStepPipe(FixedImageType::Pointer fix,MovingImageType::Pointer mov, R
 }
 int ResamplePipe(RegistrationType::Pointer registration,FixedImageType::Pointer fix,MovingImageType::Pointer mov, ResampleFilterType::Pointer resample)
 {
-	ParametersType finalParameters = registration->GetLastTransformParameters();
 	//resample process
-	TransformType::Pointer finalTransform = TransformType::New();
-	finalTransform->SetParameters(finalParameters);
+	TransformType::Pointer finalTransform =TransformType::New();
+	finalTransform->SetParameters(registration->GetLastTransformParameters());
 	finalTransform->SetFixedParameters(registration->GetTransform()->GetFixedParameters());
 	resample->SetTransform(finalTransform);
 	resample->SetInput(mov);

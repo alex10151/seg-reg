@@ -38,6 +38,7 @@
 #include"itkSubtractImageFilter.h"
 #include"itkRescaleIntensityImageFilter.h"
 #include"itkAffineTransform.h"
+#include"itkEuler3DTransform.h"
 #include"itkCenteredTransformInitializer.h"
 #include"itkTranslationTransform.h"
 #include"itkBinaryPruningImageFilter.h"
@@ -49,6 +50,7 @@
 #include"itkAntiAliasBinaryImageFilter.h"
 #include"itkBilateralImageFilter.h"
 #include"itkImportImageFilter.h"
+#include"itkShiftScaleImageFilter.h"
 #include <time.h>
 #include "iostream"
 #include <string>
@@ -62,29 +64,31 @@ namespace predef
 	//params of configurations(for segmentation)
 	constexpr float BALL_STRUCT_RADIUS =5;
 	constexpr float THRESHOLD_OUTSIDE_VALUE = 0;
-	constexpr float THRESHOLD_LOW = 250;
-	constexpr float THRESHOLD_UP = 500;
-	constexpr float HOUGHTRANSFORM_RADIUS= 2;
-	constexpr float HOUGHTRANSFORM_LINES=100;
+	constexpr float THRESHOLD_LOW = 200;
+	constexpr float THRESHOLD_UP = 1500;
+	constexpr float HOUGHTRANSFORM_RADIUS= 1;
+	constexpr float HOUGHTRANSFORM_LINES=40;
 	constexpr float HOUGHTRANSFORM_VAR = 2;
 	constexpr float LAPLACE_SIGMA = 0.5;
 	constexpr int LIMIT = 10000;
 	constexpr int WINDOW_SIZE = 7;
 	constexpr int BONES_THRESHOLD = 180;
-	constexpr int HEAD_BONES_THRESHOLD = 300;
+	constexpr int HEAD_BONES_THRESHOLD = 180;
 	constexpr int MAX_THRESHOLD = 20;
-	constexpr short DEFAULT_RESIDUAL = 15;
-	constexpr int MAX_PIXEL_VALUE = 3000;
+	constexpr short DEFAULT_RESIDUAL = 5;
+	constexpr int MAX_PIXEL_VALUE = 2000;
 	constexpr int MIN_PIXEL_VALUE = -1000;
 	constexpr int PRUNE_ITERATION = 100;
+	constexpr int DEFAULT_SHIFT = -1024;
+	constexpr int DEFAULT_SCALE = 1;
 
 	//optimizer params(registration)
 	constexpr int NB_OF_BINS = 64;
 	constexpr bool USE_PDF_DERIVATIVE = false;   //true may cause problem
 	constexpr int BACKGROUD_GRAY_LEVEL = 255;
-	constexpr double RELAX_FACTOR = 0.7;
-	constexpr unsigned int NB_ITERATION = 300;
-	constexpr unsigned int NB_OF_LEVELS = 4;
+	constexpr double RELAX_FACTOR = 0.5;
+	constexpr unsigned int NB_ITERATION = 100;
+	constexpr unsigned int NB_OF_LEVELS = 5;
 	constexpr unsigned int REINIT_SEED = 76926294;
 
 	//dicom tag
@@ -121,10 +125,11 @@ namespace predef
 	using MeanFilter = itk::MeanImageFilter<SingleInputType, SingleInputType>;
 	using ImportImageFilterType = itk::ImportImageFilter<PixelType, inputDim>;
 	using AntiStackFilterType = itk::AntiAliasBinaryImageFilter<itk::Image<float, 3>, itk::Image<float, 3>>;
-	//using CastFloatToSignedShortType = itk::CastImageFilter<InternalType, CastType >;
 	using PruneType= itk::BinaryPruningImageFilter <SingleInputType, SingleInputType >;
 	using GrindType = itk::GrayscaleGrindPeakImageFilter <SingleInputType, SingleInputType >;
 	using MedianType = itk::MedianImageFilter<SingleInputType, SingleInputType>;
+	using RescaleFilterType = itk::RescaleIntensityImageFilter<InputType, InputType>;
+	using ShiftFilterType = itk::ShiftScaleImageFilter<InputType,InputType>;
 	// for IO
 	using InputReader = itk::ImageSeriesReader<InputType>;
 	using OutputWriter = itk::ImageSeriesWriter<CastType, OutputType>;
@@ -146,8 +151,10 @@ namespace predef
 	using MovingImageType = itk::Image< PixelType, RegInputDim >;
 	using OutPutImageType = itk::Image<PixelType, RegoutputDim>;
 	using InternalImageType = itk::Image< InternalPixelType, RegInputDim >;
-	using TransformType = itk::TranslationTransform< double, RegInputDim >;
-	//using TransformType = itk::AffineTransform<double, RegInputDim>;
+	//using TransformType = itk::TranslationTransform< double, RegInputDim >;
+	using ReTransformType = itk::Euler3DTransform<double>;
+	using TransformType = itk::AffineTransform<double, RegInputDim>;
+	using TransformInitializeType = itk::CenteredTransformInitializer<TransformType, InternalImageType, InternalImageType>;
 	using OptimizerType = itk::RegularStepGradientDescentOptimizer;
 	using InterpolatorType = itk::LinearInterpolateImageFunction<InternalImageType,double>;
 	using MetricType = itk::MattesMutualInformationImageToImageMetric<InternalImageType,InternalImageType >;

@@ -1,32 +1,24 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+/Debug/
+/Release/
+/LUNG1-008/
+/LUNG1-024/
+/LUNG1-025/
+/1/
+/2/
+/3/
+*.raw
+/asdasd/
+/movimage/
+/resimage/
+/brainimage/
+/x64/
+/bones_res/
+/R0064/
+/R0065/
+/R0077/
+*.aps
+*.rc
+*.vcxproj
+*.filters
+*.user
+*.dcm

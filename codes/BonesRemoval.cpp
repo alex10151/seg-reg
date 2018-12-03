@@ -1,7 +1,8 @@
 #include"BonesRemoval.h"
 #include"Utils.h"
 #include"itkMeanImageFilter.h"
-void  BonesRemoval(InputType::Pointer inputPtr, InputType::Pointer rmvStruct)
+#include"RawWriter.h"
+InputType::Pointer  BonesRemoval(InputType::Pointer inputPtr, InputType::Pointer rmvStruct)
 {
 	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
 	itk::ImageRegionIterator<InputType> itrInput(inputPtr, inputPtr->GetRequestedRegion());
@@ -23,6 +24,7 @@ void  BonesRemoval(InputType::Pointer inputPtr, InputType::Pointer rmvStruct)
 			}
 		}
 	}
+	return inputPtr;
 }
 void  BonesVisual(SingleInputType::Pointer inputPtr, SingleInputType::Pointer boneImage)
 {
@@ -150,13 +152,12 @@ InputType::Pointer SmoothProcess(InputType::Pointer src)
 	CopyFromSeriesSagittal(volume,res);
 	return volume;
 }
-void BonesRemovalPipe(InputType::Pointer inputPtr, InputType::Pointer resBone,bool head)
+vector<InputType::Pointer> BonesRemovalPipe(InputType::Pointer inputPtr,bool head)
 {
 	InputType::SizeType size = inputPtr->GetLargestPossibleRegion().GetSize();
 	vector<SingleInputType::Pointer>transContainer = ConvertToTransverseImage(inputPtr);
 	vector<SingleInputType::Pointer>::const_iterator itr;
 	int count = 0;
-	int p = transContainer.size();
 	//create a empty volume for bones visualization
 	InputType::Pointer bones = CreateEmptyVolume(inputPtr);
 	vector<SingleInputType::Pointer>bonesTransContainer = ConvertToTransverseImage(bones);
@@ -170,14 +171,13 @@ void BonesRemovalPipe(InputType::Pointer inputPtr, InputType::Pointer resBone,bo
 
 		CopySlice(*itr,sliceForLap);
 		CopySlice(*itr,sliceForThresh);
-
 		if (head)
 		{
 			sliceForThresh= ThresholdProcess(sliceForThresh, HEAD_BONES_THRESHOLD);
 			sliceForLap = ThresholdProcess(sliceForLap, HEAD_BONES_THRESHOLD);
 			sliceForLap = LaplacianProcess(sliceForLap);
 			sliceForLap = Fusion(sliceForThresh, sliceForLap);
-			sliceForLap = OpClose(sliceForLap, BALL_STRUCT_RADIUS);
+			sliceForLap = OpClose(sliceForLap, BALL_STRUCT_RADIUS+5);
 			BonesVisual(*itrBones, sliceForLap);
 		}
 		else
@@ -192,7 +192,10 @@ void BonesRemovalPipe(InputType::Pointer inputPtr, InputType::Pointer resBone,bo
 	CopyFromSeriesTransverse(bones, bonesTransContainer);
 	if(!head)
 		bones = SmoothProcess(bones);
-	BonesRemoval(inputPtr, bones);
-	CopyVolume(bones, resBone);
+	vector<InputType::Pointer> res;
+	inputPtr = BonesRemoval(inputPtr, bones);
+	res.push_back(inputPtr);
+	res.push_back(bones);
+	return res;
 }
 
